@@ -4,7 +4,7 @@ const questionUserSchema = new Schema({
   questionId: Schema.Types.ObjectId,
   userId: Schema.Types.ObjectId,
   correct: Boolean,
-  time: Number,
+  time: Date,
   knewAnswer: Boolean,
   randomGuess: Boolean,
   educatedGuess: Boolean,

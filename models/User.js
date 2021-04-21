@@ -6,6 +6,9 @@ const userSchema = new Schema({
   score: Number,
   password: String,
   username: String,
+  currentQuestionId: Schema.Types.ObjectId,
+  currentQuestionTime: Number,
+  questionAnswered: Boolean,
 });
 
 module.exports = model("User", userSchema);

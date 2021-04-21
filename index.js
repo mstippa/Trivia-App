@@ -1,6 +1,6 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const axios = require("axios");
+const cors = require("cors");
 
 const { MONGODB, PORT } = require("./config");
 
@@ -10,10 +10,11 @@ const {
   registerUser,
   getUser,
   updateUserScore,
+  setQuestionAnswered,
 } = require("./app/users");
 const {
+  getQuestion,
   getQuestions,
-  insertQuestion,
   answerTriviaQuestion,
   answerFollowUpQuestion,
 } = require("./app/questions");
@@ -26,30 +27,39 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded());
 
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Methods", "GET,HEAD,OPTIONS,POST,PUT");
+  res.header("Access-Control-Allow-Headers", "Authorization, Content-Type");
+  next();
+});
+
 // check if user is logged in before a request is made
 app.use(auth);
+
+app.use(cors());
 
 // TODO handle routing in another file
 // TODO think about another way to handle requests
 // routes
 app.get("/", (req, res) => {
-  axios
-    .get("https://opentdb.com/api.php?amount=1&category=22&type=multiple")
-    .then((response) => {
-      const question = response.data.results[0];
-      insertQuestion(question).then((newQuestion) => res.send(newQuestion));
-    })
-    .catch((error) => {
-      res.send({ error });
-    });
+  getQuestion(req.query.questionId).then((question) => res.send(question));
 });
 app.post("/", (req, res) => {
+  // if the trivia question was answered we are then answering the follow up question
   if (req.body.answeredQuestion) {
-    answerFollowUpQuestion(req.body).then((response) => res.send(response));
+    answerFollowUpQuestion(req.body, req.userId).then((response) =>
+      res.send(response)
+    );
   } else {
     answerTriviaQuestion(req.body, req.userId).then((response) => {
       if (response.correct) updateUserScore(response.userId);
-      res.send(response);
+
+      // need to return a new token because we need the browser to rememeber that the user answered the daily trivia question
+      // const newToken = setQuestionAnswered(req.userId);
+      setQuestionAnswered(req.userId).then((newToken) => {
+        const userResponse = { ...response, newToken };
+        res.send(userResponse);
+      });
     });
   }
 });
@@ -63,7 +73,8 @@ app.get("/questions", (req, res) => {
   getQuestions().then((questions) => res.send(questions));
 });
 app.post("/login", (req, res) => {
-  login(req.body).then((result) => res.json(result));
+  // login(req.body).then((result) => res.json(result));
+  login(req.body, res);
 });
 app.post("/register", (req, res) => {
   registerUser(req.body).then((token) => res.send(token));

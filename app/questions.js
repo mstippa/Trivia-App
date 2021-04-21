@@ -2,6 +2,18 @@ const Question = require("../models/Question");
 const QuestionUser = require("../models/QuestionUser");
 
 module.exports = {
+  async getQuestion(id) {
+    try {
+      const question = await Question.findById(id);
+      console.log("question", id);
+      if (!question) throw new Error();
+      return question;
+    } catch {
+      return {
+        error: "Cannot Fetch Question. Try Again Later",
+      };
+    }
+  },
   async getQuestions() {
     try {
       const questions = await Question.find();
@@ -26,7 +38,7 @@ module.exports = {
       return newQuestion;
     } catch (error) {
       return {
-        message: "Cannot get Question",
+        message: "Cannot Insert Question",
       };
     }
   },
@@ -42,10 +54,22 @@ module.exports = {
           };
         }
 
+        const questionUser = new QuestionUser({
+          correct: false,
+          userId,
+          questionId: id,
+          knewAnswer: false,
+          educatedGuess: false,
+          randomGuess: false,
+          time: new Date().toISOString(),
+        });
+
+        questionUser.save();
+
         return {
           correct: false,
           correctAnswer: question.correctAnswer,
-          userId: user.id,
+          userId,
           questionId: id,
         };
       }
@@ -55,14 +79,10 @@ module.exports = {
       };
     }
   },
-  async answerFollowUpQuestion({
-    correct,
-    userId,
-    questionId,
-    knewAnswer,
-    educatedGuess,
-    randomGuess,
-  }) {
+  async answerFollowUpQuestion(
+    { correct, questionId, knewAnswer, educatedGuess, randomGuess },
+    userId
+  ) {
     const questionUser = new QuestionUser({
       correct,
       userId,
@@ -76,7 +96,8 @@ module.exports = {
     try {
       await questionUser.save();
       return questionUser;
-    } catch {
+    } catch (err) {
+      console.log(err);
       return {
         error: "Problem Connecting With The Database. Try Again Later.",
       };
